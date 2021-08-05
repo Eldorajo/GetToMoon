@@ -14,28 +14,28 @@ const dApp = {
   collectVars: async function() {
     // get land tokens
     this.tokens = [];
-    this.totalSupply = await this.marsContract.methods.totalSupply().call();
+    this.totalSupply = await this.GetToMoon.methods.totalSupply().call();
 
     // fetch json metadata from IPFS (name, description, image, etc)
     const fetchMetadata = (reference_uri) => fetch(`https://gateway.pinata.cloud/ipfs/${reference_uri.replace("ipfs://", "")}`, { mode: "cors" }).then((resp) => resp.json());
 
     for (let i = 1; i <= this.totalSupply; i++) {
       try {
-        const token_uri = await this.marsContract.methods.tokenURI(i).call();
+        const token_uri = await this.GetToMoon.methods.tokenURI(i).call();
         console.log('token uri', token_uri)
         const token_json = await fetchMetadata(token_uri);
         console.log('token json', token_json)
         this.tokens.push({
           tokenId: i,
-          highestBid: Number(await this.marsContract.methods.highestBid(i).call()),
-          auctionEnded: Boolean(await this.marsContract.methods.auctionEnded(i).call()),
-          pendingReturn: Number(await this.marsContract.methods.pendingReturn(i, this.accounts[0]).call()),
+          highestBid: Number(await this.GetToMoon.methods.highestBid(i).call()),
+          auctionEnded: Boolean(await this.GetToMoon.methods.auctionEnded(i).call()),
+          pendingReturn: Number(await this.GetToMoon.methods.pendingReturn(i, this.accounts[0]).call()),
           auction: new window.web3.eth.Contract(
             this.auctionJson,
-            await this.marsContract.methods.auctions(i).call(),
+            await this.GetToMoon.methods.auctions(i).call(),
             { defaultAccount: this.accounts[0] }
           ),
-          owner: await this.marsContract.methods.ownerOf(i).call(),
+          owner: await this.GetToMoon.methods.ownerOf(i).call(),
           ...token_json
         });
       } catch (e) {
@@ -92,14 +92,14 @@ const dApp = {
   bid: async function(event) {
     const tokenId = $(event.target).attr("token-id");
     const wei = Number($(event.target).prev().val());
-    await this.marsContract.methods.bid(tokenId).send({from: this.accounts[0], value: wei}).on("receipt", async (receipt) => {
+    await this.GetToMoon.methods.bid(tokenId).send({from: this.accounts[0], value: wei}).on("receipt", async (receipt) => {
       M.toast({ html: "Transaction Mined! Refreshing UI..." });
       await this.updateUI();
     });
   },
   endAuction: async function(event) {
     const tokenId = $(event.target).attr("token-id");
-    await this.marsContract.methods.endAuction(tokenId).send({from: this.accounts[0]}).on("receipt", async (receipt) => {
+    await this.GetToMoon.methods.endAuction(tokenId).send({from: this.accounts[0]}).on("receipt", async (receipt) => {
       M.toast({ html: "Transaction Mined! Refreshing UI..." });
       await this.updateUI();
     });
@@ -167,7 +167,7 @@ const dApp = {
       M.toast({ html: `Success. Reference URI located at ${reference_uri}.` });
       M.toast({ html: "Sending to blockchain..." });
 
-      await this.marsContract.methods.registerLand(reference_uri).send({from: this.accounts[0]}).on("receipt", async (receipt) => {
+      await this.GetToMoon.methods.registerLand(reference_uri).send({from: this.accounts[0]}).on("receipt", async (receipt) => {
         M.toast({ html: "Transaction Mined! Refreshing UI..." });
         $("#dapp-register-name").val("");
         $("#dapp-register-image").val("");
@@ -187,17 +187,17 @@ const dApp = {
     this.accounts = await window.web3.eth.getAccounts();
     this.contractAddress = contractAddress;
 
-    this.marsJson = await (await fetch("./MartianMarket.json")).json();
-    this.auctionJson = await (await fetch("./MartianAuction.json")).json();
+    this.MOONJson = await (await fetch("./GoToMoon.json")).json();
+    this.MOON2Json = await (await fetch("./GetToMoon.json")).json();
 
-    this.marsContract = new window.web3.eth.Contract(
-      this.marsJson,
+    this.GetToMoon = new window.web3.eth.Contract(
+      this.MOONJson,
       this.contractAddress,
       { defaultAccount: this.accounts[0] }
     );
-    console.log("Contract object", this.marsContract);
+    console.log("Contract object", this.GetToMoon);
 
-    this.isAdmin = this.accounts[0] == await this.marsContract.methods.owner().call();
+    this.isAdmin = this.accounts[0] == await this.GetToMoon.methods.owner().call();
 
     await this.updateUI();
   }
